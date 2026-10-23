@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Environment Monitor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f2f8f7;--card:#ffffff;--text:#0b2a2f;--muted:#4f6f73;--line:#d5e5e2;--accent:#0e9aa7;--accent-ink:#ffffff;
+  --ok:#2f9a27;--warn:#b87800;--bad:#e53935;--soft:#e8f6f3;--shadow:0 1px 2px rgba(11,42,47,.06),0 6px 20px rgba(11,42,47,.06);color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#071b1f;--card:#0e2f35;--text:#e8f6f3;--muted:#9bbcc0;--line:#1c4a52;--accent:#2cc4d2;--accent-ink:#06262b;--ok:#5fcf55;--warn:#f2a100;--bad:#ff6b66;--soft:#123f46;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#071b1f;--card:#0e2f35;--text:#e8f6f3;--muted:#9bbcc0;--line:#1c4a52;--accent:#2cc4d2;--accent-ink:#06262b;--ok:#5fcf55;--warn:#f2a100;--bad:#ff6b66;--soft:#123f46;--shadow:none;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;font-size:24px}
+h1{font-size:22px;margin:0;line-height:1.2} .sub{margin:0;color:var(--muted);font-size:13px}
+h2{font-size:16px;margin:0 0 10px}
+.top-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:transparent;color:var(--muted);padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.pill{display:inline-block;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card)}
+.pill.ok{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.sensors{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:12px}
+.s-head{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-weight:600;font-size:13px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok)}
+.dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.s-val{font-size:34px;font-weight:700;margin:6px 0 2px;letter-spacing:-.5px}
+.s-val small{font-size:15px;color:var(--muted);font-weight:600;margin-left:4px;letter-spacing:0}
+.spark{width:100%;height:40px;display:block}
+.s-note{font-size:13px;color:var(--muted);margin-top:4px}
+.row{display:grid;gap:12px;margin-bottom:12px}
+.r21{grid-template-columns:2fr 1fr} .r11{grid-template-columns:1fr 1fr}
+@media (max-width:860px){.r21,.r11{grid-template-columns:1fr}}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+#chart{width:100%;height:340px;display:block}
+.ctl{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.ctl:last-of-type{border-bottom:0}
+.ctl b{display:block} .ctl span.d{font-size:13px;color:var(--muted)}
+.sw{width:50px;height:28px;border-radius:999px;border:0;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw[aria-checked="true"]{background:var(--ok)} .sw[aria-checked="true"]::after{transform:translateX(22px)}
+.thr{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:10px}
+label.f{display:block;font-size:12px;color:var(--muted);font-weight:600}
+input[type=number],input[type=text],input[type=password]{width:100%;margin-top:4px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sim label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:600;margin-top:8px}
+.sim output{color:var(--text)}
+button.btn{margin-top:10px;padding:9px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+button.btn.ghost{background:transparent;color:var(--accent)}
+.chat{height:250px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:8px 12px;border-radius:14px;font-size:14px}
+.msg.ai{background:var(--soft);align-self:flex-start} .msg.me{background:var(--accent);color:var(--accent-ink);align-self:flex-end}
+.chat-in{display:flex;gap:8px;margin-top:10px}
+.chat-in input{margin:0;flex:1}
+.chat-in button{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
+ul.events{list-style:none;margin:0;padding:0;max-height:200px;overflow-y:auto;font-size:14px}
+ul.events li{padding:6px 0;border-bottom:1px solid var(--line)} ul.events time{color:var(--muted);font-size:12px;margin-right:8px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+th,td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+details.card summary{cursor:pointer;font-weight:700;font-size:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}
+.note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.mini{display:flex;gap:8px;flex-wrap:wrap}
+.off{opacity:.5;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:5;max-width:90vw}
+.toast.show{opacity:1}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:12px 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="logo" aria-hidden="true">🌿</div>
+      <div><h1>Smart Environment Monitor</h1><p class="sub">Monitor · Automate · Log · Converse</p></div></div>
+    <div class="top-right">
+      <div class="seg" id="modeSeg" role="group" aria-label="Data source">
+        <button data-mode="demo" class="on">Demo</button><button data-mode="live">Live</button></div>
+      <span class="pill ok" id="status">Simulated data</span>
+    </div>
+  </header>
+
+  <section class="sensors" id="sensors" aria-label="Live readings"></section>
+
+  <div class="row r21">
+    <div class="card">
+      <h2>Temperature and humidity trend</h2>
+      <div class="legend"><span><i style="background:var(--bad)"></i>Temperature (°C)</span><span><i style="background:var(--accent)"></i>Humidity (%)</span></div>
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="card">
+      <h2>Automation</h2>
+      <div class="ctl"><div><b>Auto mode</b><span class="d">Rules control the devices</span></div><button class="sw" id="sw-auto" role="switch" aria-checked="true" aria-label="Auto mode"></button></div>
+      <div class="ctl"><div><b>Cooling fan</b><span class="d" id="d-fan">OFF</span></div><button class="sw" id="sw-fan" role="switch" aria-checked="false" aria-label="Cooling fan"></button></div>
+      <div class="ctl"><div><b>Lights</b><span class="d" id="d-light">OFF</span></div><button class="sw" id="sw-light" role="switch" aria-checked="false" aria-label="Lights"></button></div>
+      <div class="ctl"><div><b>Buzzer alarm</b><span class="d" id="d-buzz">OFF</span></div><button class="sw" id="sw-buzz" role="switch" aria-checked="false" aria-label="Buzzer alarm"></button></div>
+      <div class="thr">
+        <label class="f">Fan ON above (°C)<input type="number" id="t-fanOn" value="30"></label>
+        <label class="f">Fan OFF below (°C)<input type="number" id="t-fanOff" value="27"></label>
+        <label class="f">Gas alarm (ppm)<input type="number" id="t-gas" value="400"></label>
+        <label class="f">Dark below (lx)<input type="number" id="t-dark" value="200"></label>
+        <label class="f">Idle timeout (s)<input type="number" id="t-idle" value="15"></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row r11">
+    <div class="card">
+      <h2>Voice and chat assistant</h2>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <div class="chat-in">
+        <input type="text" id="chatIn" placeholder="Ask about the room or give a command" aria-label="Message">
+        <button class="btn" id="send">Send</button>
+        <button class="btn ghost" id="mic" title="Speak">Mic</button>
+      </div>
+      <label class="f" style="margin-top:8px"><input type="checkbox" id="speak" style="width:auto;margin-right:6px">Read replies aloud</label>
+      <p class="note">Runs locally on the live readings. Swap in Convai by sending the same status text to your Convai character.</p>
+    </div>
+    <div class="card sim" id="simCard">
+      <h2>Wokwi-style simulator</h2>
+      <p class="note" style="margin-top:0">Change the environment and watch the rules respond.</p>
+      <label>Temperature <output id="o-temp">28</output></label><input type="range" id="s-temp" min="15" max="45" step="0.5" value="28">
+      <label>Humidity <output id="o-hum">62</output></label><input type="range" id="s-hum" min="20" max="95" value="62">
+      <label>Air quality (ppm) <output id="o-gas">180</output></label><input type="range" id="s-gas" min="50" max="800" value="180">
+      <label>Light (lx) <output id="o-lux">450</output></label><input type="range" id="s-lux" min="0" max="1000" step="10" value="450">
+      <div class="mini"><button class="btn" id="btnMotion">Simulate motion (8 s)</button><button class="btn ghost" id="btnGas">Gas spike</button></div>
+      <label class="f" style="margin-top:10px;display:block"><input type="checkbox" id="drift" style="width:auto;margin-right:6px">Random drift</label>
+    </div>
+  </div>
+
+  <div class="row r11">
+    <div class="card"><h2>Event log</h2><ul class="events" id="events"></ul></div>
+    <div class="card">
+      <h2>Data log</h2>
+      <div class="tbl"><table><thead><tr><th>Time</th><th>°C</th><th>%</th><th>ppm</th><th>lx</th><th>Fan</th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="mini"><button class="btn" id="dl">Download CSV</button><button class="btn ghost" id="cp">Copy CSV</button></div>
+      <p class="note">Import the CSV into Google Sheets, or enable the Sheets webhook below for automatic rows.</p>
+    </div>
+  </div>
+
+  <details class="card">
+    <summary>Integrations: ThingSpeak, Blynk, Google Sheets</summary>
+    <p class="note">These need internet access from your browser. Open this file locally or host it (for example on GitHub Pages). Saved only in your browser.</p>
+    <div class="grid2">
+      <label class="f">ThingSpeak channel ID (Live mode)<input type="text" id="ts-id" placeholder="e.g. 1234567"></label>
+      <label class="f">ThingSpeak read key (private channel)<input type="password" id="ts-read"></label>
+      <label class="f">ThingSpeak write key (send Demo data)<input type="password" id="ts-write"></label>
+      <label class="f">Blynk auth token<input type="password" id="bl-token"></label>
+      <label class="f">Blynk pins: fan, lights, buzzer<input type="text" id="bl-pins" value="1,2,3"></label>
+      <label class="f">Google Sheets webhook URL (Apps Script)<input type="text" id="gs-url" placeholder="https://script.google.com/macros/s/.../exec"></label>
+    </div>
+    <p class="note">ThingSpeak field order: 1 temperature, 2 humidity, 3 air quality, 4 light, 5 motion (0 or 1).</p>
+    <button class="btn" id="saveCfg">Save settings</button>
+  </details>
+
+  <footer>Smart Environment Monitor · ESP32 · Wokwi · Node-RED · Blynk · ThingSpeak · Google Sheets · Convai</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+var $ = function (s) { return document.querySelector(s); };
+var SENS = [
+  { k: "temp", label: "Temperature", unit: "°C" }, { k: "hum", label: "Humidity", unit: "%" },
+  { k: "gas", label: "Air quality", unit: "ppm" }, { k: "lux", label: "Light", unit: "lx" },
+  { k: "motion", label: "Motion", unit: "" }
+];
+var S = {
+  mode: "demo", auto: true,
+  env: { temp: 28, hum: 62, gas: 180, lux: 450 }, motionUntil: 0,
+  read: { temp: 28, hum: 62, gas: 180, lux: 450, motion: false },
+  act: { fan: false, light: false, buzz: false },
+  thr: { fanOn: 30, fanOff: 27, gas: 400, dark: 200, idle: 15 },
+  lastMotion: 0, series: { temp: [], hum: [], gas: [], lux: [], motion: [] },
+  rows: [], events: [], tick: 0, cfg: {}
+};
+
+function now() { return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
+function toast(t) { var el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove("show"); }, 2600); }
+function css(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function rnd() { return Math.random() - 0.5; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+/* ---------- sensor cards ---------- */
+SENS.forEach(function (d) {
+  var c = document.createElement("div"); c.className = "card";
+  c.innerHTML = '<div class="s-head"><span>' + d.label + '</span><span class="dot" id="d-' + d.k + '"></span></div>' +
+    '<div class="s-val"><span id="v-' + d.k + '">--</span><small>' + d.unit + '</small></div>' +
+    '<canvas class="spark" id="sp-' + d.k + '"></canvas><div class="s-note" id="n-' + d.k + '">Waiting for data</div>';
+  $("#sensors").appendChild(c);
+});
+
+function level(k, v) {
+  if (k === "temp") return v > 35 ? ["bad", "Too hot"] : v > S.thr.fanOn ? ["warn", "Warm: cooling needed"] : ["ok", "Comfortable"];
+  if (k === "hum") return v > 80 ? ["bad", "Very humid"] : v > 70 ? ["warn", "Humid"] : v < 30 ? ["warn", "Dry"] : ["ok", "Comfortable"];
+  if (k === "gas") return v > S.thr.gas ? ["bad", "Alarm: unsafe air"] : v > S.thr.gas * 0.65 ? ["warn", "Elevated"] : ["ok", "Clean air"];
+  if (k === "lux") return v < S.thr.dark ? ["warn", "Dark"] : ["ok", "Well lit"];
+  return v ? ["ok", "Presence detected"] : ["ok", "No movement"];
+}
+
+function spark(id, data, color) {
+  var cv = $(id), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (!w) return;
+  cv.width = w * dpr; cv.height = h * dpr;
+  var g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  if (data.length < 2) return;
+  var mn = Math.min.apply(null, data), mx = Math.max.apply(null, data); if (mx - mn < 1) { mx += 1; mn -= 1; }
+  g.strokeStyle = color; g.lineWidth = 2; g.lineJoin = "round"; g.beginPath();
+  data.forEach(function (v, i) { var x = i / (data.length - 1) * w, y = h - 4 - (v - mn) / (mx - mn) * (h - 8); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.stroke();
+}
+
+function chart() {
+  var cv = $("#chart"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (!w) return;
+  cv.width = w * dpr; cv.height = h * dpr;
+  var g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+  var padL = 34, padB = 22, padT = 8, T = S.series.temp, H = S.series.hum;
+  var all = T.concat(H); if (all.length < 2) return;
+  var mn = Math.floor(Math.min.apply(null, all) / 5) * 5 - 5, mx = Math.ceil(Math.max.apply(null, all) / 5) * 5 + 5;
+  g.font = "11px system-ui,sans-serif"; g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) {
+    var val = mn + (mx - mn) * i / 4, y = padT + (h - padT - padB) * (1 - i / 4);
+    g.beginPath(); g.moveTo(padL, y); g.lineTo(w, y); g.stroke(); g.fillText(Math.round(val), 2, y + 4);
+  }
+  g.fillText("older", padL, h - 6); g.fillText("now", w - 24, h - 6);
+  function line(d, color) {
+    g.strokeStyle = color; g.lineWidth = 2.5; g.lineJoin = "round"; g.beginPath();
+    d.forEach(function (v, i) { var x = padL + i / (d.length - 1) * (w - padL - 4), y = padT + (h - padT - padB) * (1 - (v - mn) / (mx - mn)); i ? g.lineTo(x, y) : g.moveTo(x, y); });
+    g.stroke();
+  }
+  line(T, css("--bad")); line(H, css("--accent"));
+}
+
+/* ---------- actuators, events, integrations ---------- */
+function logEvent(msg) {
+  S.events.unshift({ t: now(), m: msg }); S.events = S.events.slice(0, 30);
+  $("#events").innerHTML = S.events.map(function (e) { return "<li><time>" + e.t + "</time>" + e.m + "</li>"; }).join("");
+}
+function blynkSet(k, v) {
+  var c = S.cfg; if (!c.blToken) return;
+  var pins = (c.blPins || "1,2,3").split(","), pin = { fan: pins[0], light: pins[1], buzz: pins[2] }[k];
+  if (!pin) return;
+  fetch("https://blynk.cloud/external/api/update?token=" + encodeURIComponent(c.blToken) + "&v" + pin.trim() + "=" + (v ? 1 : 0)).catch(function () { });
+}
+var NAMES = { fan: "Cooling fan", light: "Lights", buzz: "Buzzer" };
+function setAct(k, v, why) {
+  if (S.act[k] === v) return;
+  S.act[k] = v; logEvent(NAMES[k] + " " + (v ? "ON" : "OFF") + (why ? " · " + why : "")); blynkSet(k, v); renderAct();
+}
+function renderAct() {
+  ["fan", "light", "buzz"].forEach(function (k) {
+    $("#sw-" + k).setAttribute("aria-checked", S.act[k]); $("#d-" + k).textContent = S.act[k] ? "ON" : "OFF";
+  });
+  $("#sw-auto").setAttribute("aria-checked", S.auto);
+}
+function applyRules(t) {
+  if (!S.auto) return;
+  var r = S.read, th = S.thr;
+  if (r.gas > th.gas) { setAct("buzz", true, "air quality above limit"); setAct("fan", true, "ventilating"); }
+  else {
+    if (r.gas < th.gas * 0.8) setAct("buzz", false, "air is clear");
+    if (r.temp > th.fanOn) setAct("fan", true, "temperature " + r.temp.toFixed(1) + " °C");
+    else if (r.temp < th.fanOff) setAct("fan", false, "temperature back to " + r.temp.toFixed(1) + " °C");
+  }
+  if (r.motion) S.lastMotion = t;
+  var occupied = (t - S.lastMotion) < th.idle * 1000;
+  if (r.lux < th.dark && occupied) setAct("light", true, "dark and room occupied");
+  else if (!occupied) setAct("light", false, "room empty");
+  else if (r.lux >= th.dark * 1.3) setAct("light", false, "enough daylight");
+}
+
+/* ---------- main loop ---------- */
+function simulate(t) {
+  var e = S.env, r = S.read, f = S.act.fan;
+  if ($("#drift").checked) {
+    e.temp = clamp(e.temp + rnd() * 0.3, 20, 38); e.hum = clamp(e.hum + rnd() * 0.6, 35, 85);
+    $("#s-temp").value = e.temp; $("#s-hum").value = e.hum; syncOut();
+  }
+  r.temp += ((e.temp - (f ? 4 : 0)) - r.temp) * 0.25 + rnd() * 0.1;
+  r.hum += ((e.hum - (f ? 5 : 0)) - r.hum) * 0.25 + rnd() * 0.2;
+  r.gas += ((e.gas * (f ? 0.75 : 1)) - r.gas) * 0.25 + rnd() * 3;
+  r.lux = e.lux + (S.act.light ? 150 : 0) + rnd() * 6;
+  r.motion = t < S.motionUntil;
+}
+function render() {
+  SENS.forEach(function (d) {
+    var v = S.read[d.k], num = d.k === "motion" ? (v ? 1 : 0) : v, lv = level(d.k, num);
+    $("#v-" + d.k).textContent = d.k === "motion" ? (v ? "Detected" : "Clear") : (d.k === "temp" || d.k === "hum" ? num.toFixed(1) : Math.round(num));
+    $("#d-" + d.k).className = "dot " + (lv[0] === "ok" ? "" : lv[0]); $("#n-" + d.k).textContent = lv[1];
+    spark("#sp-" + d.k, S.series[d.k], css(lv[0] === "bad" ? "--bad" : lv[0] === "warn" ? "--warn" : "--accent"));
+  });
+  chart();
+}
+function pushSeries() {
+  var r = S.read, s = S.series;
+  [["temp", r.temp], ["hum", r.hum], ["gas", r.gas], ["lux", r.lux], ["motion", r.motion ? 1 : 0]].forEach(function (p) { s[p[0]].push(p[1]); if (s[p[0]].length > 60) s[p[0]].shift(); });
+}
+function addRow() {
+  var r = S.read; S.rows.unshift({ t: now(), temp: r.temp, hum: r.hum, gas: r.gas, lux: r.lux, motion: r.motion ? 1 : 0, fan: S.act.fan ? 1 : 0, light: S.act.light ? 1 : 0, buzz: S.act.buzz ? 1 : 0 });
+  if (S.rows.length > 500) S.rows.pop();
+  $("#rows").innerHTML = S.rows.slice(0, 8).map(function (x) { return "<tr><td>" + x.t + "</td><td>" + x.temp.toFixed(1) + "</td><td>" + x.hum.toFixed(0) + "</td><td>" + Math.round(x.gas) + "</td><td>" + Math.round(x.lux) + "</td><td>" + (x.fan ? "ON" : "OFF") + "</td></tr>"; }).join("");
+  var c = S.cfg;
+  if (c.gsUrl && S.rows.length % 3 === 0) fetch(c.gsUrl, { method: "POST", mode: "no-cors", body: JSON.stringify(S.rows[0]) }).catch(function () { });
+  if (c.tsWrite && S.mode === "demo" && S.rows.length % 4 === 0) {
+    fetch("https://api.thingspeak.com/update?api_key=" + encodeURIComponent(c.tsWrite) + "&field1=" + x2(S.read.temp) + "&field2=" + x2(S.read.hum) + "&field3=" + x2(S.read.gas) + "&field4=" + x2(S.read.lux) + "&field5=" + (S.read.motion ? 1 : 0), { mode: "no-cors" }).catch(function () { });
+  }
+}
+function x2(v) { return v.toFixed(1); }
+function loop() {
+  var t = Date.now(); S.tick++;
+  if (S.mode === "demo") simulate(t);
+  applyRules(t); pushSeries(); if (S.tick % 5 === 1) addRow(); render();
+}
+
+/* ---------- live mode (ThingSpeak) ---------- */
+function setStatus(txt, cls) { var p = $("#status"); p.textContent = txt; p.className = "pill " + cls; }
+function poll() {
+  if (S.mode !== "live") return;
+  var c = S.cfg; if (!c.tsId) { setStatus("Live: add a ThingSpeak channel ID", "warn"); return; }
+  var u = "https://api.thingspeak.com/channels/" + encodeURIComponent(c.tsId) + "/feeds/last.json" + (c.tsRead ? "?api_key=" + encodeURIComponent(c.tsRead) : "");
+  fetch(u).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || j.field1 === undefined) throw new Error("no data");
+    S.read.temp = +j.field1; S.read.hum = +j.field2; S.read.gas = +j.field3; S.read.lux = +j.field4; S.read.motion = +j.field5 > 0;
+    setStatus("Live · updated " + now(), "ok");
+  }).catch(function () { setStatus("Live unavailable: check channel, or open this file locally", "bad"); });
+}
+function setMode(m) {
+  S.mode = m;
+  document.querySelectorAll("#modeSeg button").forEach(function (b) { b.classList.toggle("on", b.dataset.mode === m); });
+  $("#simCard").classList.toggle("off", m === "live");
+  if (m === "demo") setStatus("Simulated data", "ok"); else { setStatus("Live: connecting", "warn"); poll(); }
+  logEvent("Mode: " + (m === "demo" ? "Demo (simulated)" : "Live (ThingSpeak)"));
+}
+
+/* ---------- assistant ---------- */
+function summary() {
+  var r = S.read, bad = level("gas", r.gas)[0] === "bad" || level("temp", r.temp)[0] === "bad";
+  var warn = level("temp", r.temp)[0] === "warn" || level("hum", r.hum)[0] === "warn" || level("gas", r.gas)[0] === "warn";
+  return "It’s " + r.temp.toFixed(1) + " °C with " + r.hum.toFixed(0) + " % humidity, air at " + Math.round(r.gas) + " ppm and " + Math.round(r.lux) + " lx of light. " +
+    (r.motion ? "Someone is in the room. " : "The room is empty. ") + (bad ? "Attention needed: conditions are unsafe." : warn ? "Mostly fine, with something worth watching." : "All clear.");
+}
+function dev(text) { return /fan|cooler|cooling/.test(text) ? "fan" : /light|lamp|bulb/.test(text) ? "light" : /buzzer|alarm/.test(text) ? "buzz" : null; }
+function reply(q) {
+  var t = q.toLowerCase(), r = S.read, d = dev(t), on = /\b(on|start|enable|switch on|turn on)\b/.test(t), off = /\b(off|stop|disable|switch off|turn off)\b/.test(t);
+  if (d && (on || off)) { S.auto = false; setAct(d, !off, "voice command"); renderAct(); return "Done. " + NAMES[d] + " is now " + (!off ? "ON" : "OFF") + ". Auto mode is off, say “auto mode” to hand control back."; }
+  if (/auto/.test(t)) { S.auto = true; renderAct(); return "Auto mode is on. The rules are in charge again."; }
+  if (/safe|status|summary|how is|how’s|how's|room/.test(t)) return summary();
+  if (/temp|hot|warm|cold/.test(t)) return "The temperature is " + r.temp.toFixed(1) + " °C. " + level("temp", r.temp)[1] + ".";
+  if (/humid|moist/.test(t)) return "Humidity is " + r.hum.toFixed(0) + " %. " + level("hum", r.hum)[1] + ".";
+  if (/air|gas|smoke|quality/.test(t)) return "Air quality reads " + Math.round(r.gas) + " ppm. " + level("gas", r.gas)[1] + ".";
+  if (/light|lux|bright|dark/.test(t)) return "Light level is " + Math.round(r.lux) + " lx. " + level("lux", r.lux)[1] + ". Lights are " + (S.act.light ? "ON" : "OFF") + ".";
+  if (/motion|anyone|people|occup/.test(t)) return r.motion ? "Yes, movement is detected right now." : "No movement right now.";
+  return "I can report temperature, humidity, air quality, light and motion, or switch the fan, lights and buzzer. Try “Is the room safe?”";
+}
+function say(who, text) {
+  var m = document.createElement("div"); m.className = "msg " + who; m.textContent = text; $("#chat").appendChild(m); $("#chat").scrollTop = 1e6;
+  if (who === "ai" && $("#speak").checked && window.speechSynthesis) { try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch (e) { } }
+}
+function ask(q) { q = (q || "").trim(); if (!q) return; say("me", q); say("ai", reply(q)); $("#chatIn").value = ""; }
+say("ai", "Hi, I’m your environment assistant. Ask me how the room is, or tell me to switch something.");
+["Is the room safe?", "Turn on the fan", "What’s the air quality?", "Turn off the lights", "Auto mode"].forEach(function (q) {
+  var b = document.createElement("button"); b.className = "chip"; b.textContent = q; b.onclick = function () { ask(q); }; $("#chips").appendChild(b);
+});
+$("#send").onclick = function () { ask($("#chatIn").value); };
+$("#chatIn").addEventListener("keydown", function (e) { if (e.key === "Enter") ask($("#chatIn").value); });
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) { $("#mic").style.display = "none"; } else {
+  $("#mic").onclick = function () { try { var rec = new SR(); rec.lang = "en-IN"; rec.onresult = function (e) { ask(e.results[0][0].transcript); }; rec.onerror = function () { toast("Microphone not available here"); }; rec.start(); toast("Listening…"); } catch (e) { toast("Microphone not available here"); } };
+}
+
+/* ---------- wiring ---------- */
+function syncOut() { ["temp", "hum", "gas", "lux"].forEach(function (k) { $("#o-" + k).textContent = (+$("#s-" + k).value).toFixed(k === "temp" ? 1 : 0); }); }
+["temp", "hum", "gas", "lux"].forEach(function (k) { $("#s-" + k).addEventListener("input", function () { S.env[k] = +this.value; syncOut(); }); });
+$("#btnMotion").onclick = function () { S.motionUntil = Date.now() + 8000; logEvent("Motion simulated"); };
+$("#btnGas").onclick = function () { S.env.gas = 520; $("#s-gas").value = 520; syncOut(); logEvent("Gas spike simulated"); setTimeout(function () { S.env.gas = 180; $("#s-gas").value = 180; syncOut(); }, 9000); };
+[["fan"], ["light"], ["buzz"]].forEach(function (a) { $("#sw-" + a[0]).onclick = function () { if (S.auto) { S.auto = false; toast("Manual override: auto mode off"); } setAct(a[0], !S.act[a[0]], "manual"); renderAct(); }; });
+$("#sw-auto").onclick = function () { S.auto = !S.auto; renderAct(); logEvent("Auto mode " + (S.auto ? "ON" : "OFF")); };
+["fanOn", "fanOff", "gas", "dark", "idle"].forEach(function (k) { $("#t-" + k).addEventListener("change", function () { S.thr[k] = +this.value; }); });
+document.querySelectorAll("#modeSeg button").forEach(function (b) { b.onclick = function () { setMode(b.dataset.mode); }; });
+
+function csv() { return "time,temp_c,humidity_pct,air_ppm,light_lx,motion,fan,light,buzzer\n" + S.rows.slice().reverse().map(function (r) { return [r.t, r.temp.toFixed(1), r.hum.toFixed(1), Math.round(r.gas), Math.round(r.lux), r.motion, r.fan, r.light, r.buzz].join(","); }).join("\n"); }
+$("#dl").onclick = function () { try { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv()], { type: "text/csv" })); a.download = "environment-log.csv"; a.click(); } catch (e) { toast("Download not available here"); } };
+$("#cp").onclick = function () { try { navigator.clipboard.writeText(csv()).then(function () { toast("CSV copied"); }, function () { toast("Copy not available here"); }); } catch (e) { toast("Copy not available here"); } };
+
+var CFG = [["ts-id", "tsId"], ["ts-read", "tsRead"], ["ts-write", "tsWrite"], ["bl-token", "blToken"], ["bl-pins", "blPins"], ["gs-url", "gsUrl"]];
+function loadCfg() { try { S.cfg = JSON.parse(localStorage.getItem("semCfg") || "{}"); } catch (e) { S.cfg = {}; } CFG.forEach(function (p) { if (S.cfg[p[1]]) $("#" + p[0]).value = S.cfg[p[1]]; }); }
+$("#saveCfg").onclick = function () { CFG.forEach(function (p) { S.cfg[p[1]] = $("#" + p[0]).value.trim(); }); try { localStorage.setItem("semCfg", JSON.stringify(S.cfg)); } catch (e) { } toast("Settings saved"); if (S.mode === "live") poll(); };
+
+window.addEventListener("resize", render);
+if (window.matchMedia) { try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render); } catch (e) { } }
+
+loadCfg(); renderAct(); syncOut(); logEvent("System started");
+for (var i = 0; i < 12; i++) { simulate(Date.now()); pushSeries(); }
+addRow(); render();
+setInterval(loop, 1000); setInterval(poll, 15000);
+</script>
+</body>
+</html>
